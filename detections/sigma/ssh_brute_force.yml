@@ -1,0 +1,28 @@
+title: SSH Brute Force From Single Source
+id: 27f11011-1285-41bd-ab18-6d1d5c979786
+status: experimental
+description: >
+  Detects 8 or more failed SSH authentications from the same source IP within a
+  90-second window, indicating a password brute-force attempt. Mirrors Wazuh
+  local rule 100001.
+references:
+  - https://attack.mitre.org/techniques/T1110/
+author: Anthony Mackenzi
+date: 2026/07/19
+tags:
+  - attack.credential_access
+  - attack.t1110
+  - attack.t1110.001
+logsource:
+  product: linux
+  service: sshd
+detection:
+  selection:
+    - 'Failed password'
+    - 'Invalid user'
+  timeframe: 90s
+  condition: selection | count() by src_ip > 8
+falsepositives:
+  - Misconfigured backup/automation account repeatedly using a stale password
+  - A user who forgot their password (usually far fewer attempts)
+level: high

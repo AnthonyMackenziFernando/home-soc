@@ -66,6 +66,27 @@ EOF
   echo "[+] Added Suricata, auditd and auth.log sources to $OSSEC_CONF"
 fi
 
+# --- auditd: install + load the lab's keyed rules ---------------------------
+# These keys (identity / priv_esc / netcat) are matched by the Wazuh rules in
+# detections/wazuh-rules/local_rules.xml.
+echo "[*] Installing auditd and loading Home SOC audit rules"
+apt-get install -y auditd audispd-plugins
+cat > /etc/audit/rules.d/homesoc.rules <<'EOF'
+## Home SOC auditd rules (keys consumed by Wazuh local_rules.xml)
+-w /etc/passwd  -p wa -k identity
+-w /etc/shadow  -p wa -k identity
+-w /etc/group   -p wa -k identity
+-w /etc/gshadow -p wa -k identity
+-w /etc/sudoers   -p wa -k priv_esc
+-w /etc/sudoers.d -p wa -k priv_esc
+-w /usr/bin/nc    -p x -k netcat
+-w /bin/nc        -p x -k netcat
+-w /usr/bin/ncat  -p x -k netcat
+-w /usr/bin/socat -p x -k netcat
+EOF
+augenrules --load 2>/dev/null || service auditd restart 2>/dev/null || systemctl restart auditd 2>/dev/null || true
+systemctl enable auditd 2>/dev/null || true
+
 systemctl daemon-reload
 systemctl enable wazuh-agent
 systemctl restart wazuh-agent

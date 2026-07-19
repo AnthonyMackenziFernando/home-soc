@@ -1,0 +1,28 @@
+title: Sudoers File Or Directory Modified
+id: d8211402-c022-4335-b916-5a9ff5b17309
+status: experimental
+description: >
+  Detects write/attribute changes to /etc/sudoers or /etc/sudoers.d, a common
+  privilege-escalation and persistence technique. Mirrors Wazuh local rule
+  100031 (auditd key 'priv_esc').
+references:
+  - https://attack.mitre.org/techniques/T1548/003/
+author: Anthony Mackenzi
+date: 2026/07/19
+tags:
+  - attack.privilege_escalation
+  - attack.persistence
+  - attack.t1548.003
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    type: 'PATH'
+    name|startswith:
+      - '/etc/sudoers'
+  condition: selection
+falsepositives:
+  - Legitimate administration (adding a sudo rule) — correlate with a change ticket
+  - Package updates that ship a sudoers.d drop-in
+level: high

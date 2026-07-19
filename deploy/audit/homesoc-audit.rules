@@ -1,0 +1,29 @@
+## ===========================================================================
+## Home SOC — auditd rules
+## Author: Anthony Mackenzi
+##
+## These keyed watches turn kernel audit events into high-signal detections.
+## The key names (identity / priv_esc / netcat) are matched by Wazuh rules in
+## detections/wazuh-rules/local_rules.xml via <field name="audit.key">.
+##
+## Install on an endpoint:
+##     sudo cp deploy/audit/homesoc-audit.rules /etc/audit/rules.d/homesoc.rules
+##     sudo augenrules --load        # or: sudo service auditd restart
+## (scripts/install-agent-linux.sh installs the same content automatically.)
+## ===========================================================================
+
+## Identity & credential files  (MITRE T1003, T1098, T1136)
+-w /etc/passwd  -p wa -k identity
+-w /etc/shadow  -p wa -k identity
+-w /etc/group   -p wa -k identity
+-w /etc/gshadow -p wa -k identity
+
+## Sudoers / privilege escalation  (MITRE T1548.003)
+-w /etc/sudoers   -p wa -k priv_esc
+-w /etc/sudoers.d -p wa -k priv_esc
+
+## Reverse-shell / data-transfer tooling  (MITRE T1059, T1095)
+-w /usr/bin/nc    -p x -k netcat
+-w /bin/nc        -p x -k netcat
+-w /usr/bin/ncat  -p x -k netcat
+-w /usr/bin/socat -p x -k netcat

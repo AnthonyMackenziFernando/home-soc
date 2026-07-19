@@ -1,0 +1,192 @@
+<!--
+  ===========================================================================
+  Home SOC — custom Wazuh detection rules
+  Author: Anthony Mackenzi
+
+  Local rule IDs use the 100000+ range (reserved for user rules so they never
+  clash with the built-in ruleset). Every rule is tagged with its MITRE ATT&CK
+  technique. The full catalogue (data source, simulation, Sigma equivalent) is
+  in ../README.md.
+
+  Test any rule without touching production with:
+      /var/ossec/bin/wazuh-logtest
+  then paste a sample log line. Deploy changes with scripts/deploy-rules.sh.
+  ===========================================================================
+-->
+<group name="homesoc,local,">
+
+  <!-- =====================================================================
+       AUTHENTICATION — Brute force  (MITRE T1110)
+       Builds on the built-in auth-failure rules (group authentication_failed)
+       covering sshd, PAM, etc.
+       ===================================================================== -->
+  <rule id="100001" level="10" frequency="8" timeframe="90">
+    <if_matched_group>authentication_failed</if_matched_group>
+    <same_source_ip />
+    <description>Brute force: 8+ authentication failures from the same source IP within 90s.</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+    <group>authentication_failures,brute_force,pci_dss_11.4,</group>
+  </rule>
+
+  <!-- Successful auth from an IP that was just brute forcing = likely account
+       takeover. This is the flagship correlation of the lab. -->
+  <rule id="100002" level="12" frequency="1" timeframe="300">
+    <if_matched_sid>100001</if_matched_sid>
+    <if_group>authentication_success</if_group>
+    <same_source_ip />
+    <description>Possible successful brute force: login succeeded from an IP previously flagged for brute forcing.</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+    <group>authentication_success,brute_force,</group>
+  </rule>
+
+  <!-- =====================================================================
+       ACCOUNT MANIPULATION / PERSISTENCE
+       ===================================================================== -->
+  <!-- New local user or group (useradd/groupadd carry group 'adduser'). T1136 -->
+  <rule id="100020" level="10">
+    <if_group>adduser</if_group>
+    <description>New local account or group created (possible persistence).</description>
+    <mitre>
+      <id>T1136</id>
+    </mitre>
+    <group>account_changes,</group>
+  </rule>
+
+  <!-- Identity/credential files modified. Keyed via auditd (key=identity). T1003/T1098 -->
+  <rule id="100030" level="10">
+    <if_group>audit</if_group>
+    <field name="audit.key">identity</field>
+    <description>Sensitive identity file (passwd/shadow/group) was modified.</description>
+    <mitre>
+      <id>T1098</id>
+      <id>T1003.008</id>
+    </mitre>
+    <group>account_changes,audit,</group>
+  </rule>
+
+  <!-- =====================================================================
+       PRIVILEGE ESCALATION
+       ===================================================================== -->
+  <!-- sudoers modified. Keyed via auditd (key=priv_esc). T1548.003 -->
+  <rule id="100031" level="12">
+    <if_group>audit</if_group>
+    <field name="audit.key">priv_esc</field>
+    <description>Sudoers configuration modified (possible privilege escalation / persistence).</description>
+    <mitre>
+      <id>T1548.003</id>
+    </mitre>
+    <group>audit,privilege_escalation,</group>
+  </rule>
+
+  <!-- =====================================================================
+       EXECUTION / TOOLING  (MITRE T1059)
+       ===================================================================== -->
+  <!-- Netcat / socat executed. Keyed via auditd (key=netcat). -->
+  <rule id="100034" level="10">
+    <if_group>audit</if_group>
+    <field name="audit.key">netcat</field>
+    <description>Netcat/socat executed (possible reverse shell or data transfer).</description>
+    <mitre>
+      <id>T1059</id>
+      <id>T1095</id>
+    </mitre>
+    <group>audit,execution,</group>
+  </rule>
+
+  <!-- New/changed file in a world-writable temp dir (payload staging). Uses FIM
+       real-time monitoring configured in agent.conf. T1059 -->
+  <rule id="100062" level="9">
+    <if_group>syscheck</if_group>
+    <field name="file">^/tmp/|^/dev/shm/</field>
+    <description>File created or modified in a world-writable temp directory (possible payload staging).</description>
+    <mitre>
+      <id>T1059</id>
+    </mitre>
+    <group>syscheck,execution,</group>
+  </rule>
+
+  <!-- =====================================================================
+       PERSISTENCE — Web shell & cron  (FIM)
+       ===================================================================== -->
+  <!-- New file in a web root = candidate web shell. T1505.003 -->
+  <rule id="100060" level="12">
+    <if_group>syscheck</if_group>
+    <field name="file">^/var/www/</field>
+    <description>New or modified file in the web root (possible web shell).</description>
+    <mitre>
+      <id>T1505.003</id>
+    </mitre>
+    <group>syscheck,persistence,</group>
+  </rule>
+
+  <!-- Cron job created/modified = candidate persistence. T1053.003 -->
+  <rule id="100061" level="10">
+    <if_group>syscheck</if_group>
+    <field name="file">/etc/cron|/var/spool/cron</field>
+    <description>Cron job created or modified (possible scheduled-task persistence).</description>
+    <mitre>
+      <id>T1053.003</id>
+    </mitre>
+    <group>syscheck,persistence,</group>
+  </rule>
+
+  <!-- =====================================================================
+       NETWORK IDS — Suricata escalation
+       ===================================================================== -->
+  <!-- Raise Suricata's highest-severity IDS alerts to a notable level. T1046 -->
+  <rule id="100040" level="11">
+    <if_sid>86601</if_sid>
+    <field name="data.alert.severity">1</field>
+    <description>Suricata: high-severity network IDS alert ($(data.alert.signature)).</description>
+    <mitre>
+      <id>T1046</id>
+    </mitre>
+    <group>ids,suricata,</group>
+  </rule>
+
+  <!-- =====================================================================
+       WEB APPLICATION ATTACK
+       ===================================================================== -->
+  <!-- Built-in web rules tag attacks with group 'attack'. Escalate + tag. T1190 -->
+  <rule id="100050" level="10">
+    <if_group>attack</if_group>
+    <description>Web application attack pattern detected (SQLi/XSS/traversal).</description>
+    <mitre>
+      <id>T1190</id>
+    </mitre>
+    <group>web,attack,</group>
+  </rule>
+
+  <!-- =====================================================================
+       CUSTOM DECODER DEMO — homesoc-app
+       Full decoder -> rule -> correlation pipeline for a bespoke log source.
+       Trigger it with simulations/custom-app-bruteforce (no services needed).
+       ===================================================================== -->
+  <rule id="100070" level="3">
+    <decoded_as>homesoc-app</decoded_as>
+    <description>HomeSOC demo app event.</description>
+    <group>homesoc_app,</group>
+  </rule>
+
+  <rule id="100071" level="5">
+    <if_sid>100070</if_sid>
+    <match>LOGIN_FAILED</match>
+    <description>HomeSOC app: failed login for user '$(user)' from $(srcip).</description>
+    <group>homesoc_app,authentication_failed,</group>
+  </rule>
+
+  <rule id="100072" level="10" frequency="5" timeframe="60">
+    <if_matched_sid>100071</if_matched_sid>
+    <same_source_ip />
+    <description>HomeSOC app: brute force - 5+ failed logins from $(srcip) within 60s.</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+    <group>homesoc_app,authentication_failures,brute_force,</group>
+  </rule>
+
+</group>

@@ -1,0 +1,32 @@
+title: Possible Web Shell Written To Web Root
+id: 715e8b13-4fe9-4615-bcb1-02916ebe4660
+status: experimental
+description: >
+  Detects creation of a server-side script file under a web root, a hallmark of
+  web-shell deployment after exploitation. Mirrors Wazuh local rule 100060
+  (FIM real-time monitoring of /var/www).
+references:
+  - https://attack.mitre.org/techniques/T1505/003/
+author: Anthony Mackenzi
+date: 2026/07/19
+tags:
+  - attack.persistence
+  - attack.t1505.003
+logsource:
+  product: linux
+  category: file_event
+detection:
+  selection:
+    TargetFilename|startswith: '/var/www/'
+    TargetFilename|endswith:
+      - '.php'
+      - '.jsp'
+      - '.jspx'
+      - '.asp'
+      - '.aspx'
+      - '.phtml'
+  condition: selection
+falsepositives:
+  - Legitimate application deployment or CMS plugin installation
+  - CI/CD pipelines writing application files (correlate with deployment window)
+level: high

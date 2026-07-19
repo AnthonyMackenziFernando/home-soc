@@ -1,0 +1,24 @@
+<!--
+  Home SOC — custom Wazuh decoders
+  Author: Anthony Mackenzi
+
+  Wazuh ships decoders for sshd, sudo, auditd, syscheck (FIM) and Suricata, so
+  most rules in local_rules.xml reuse those. This file adds one decoder for a
+  small demo application ("homesoc-app") to show decoder authoring end to end:
+  a raw log line is parsed into structured fields (user, srcip) that rules and
+  correlations can then reason about.
+
+  Example line this decoder parses (see simulations/custom-app-bruteforce):
+      Jul 19 10:00:00 host homesoc-app: LOGIN_FAILED user=admin src=10.0.0.5 reason=badpass
+-->
+
+<decoder name="homesoc-app">
+  <program_name>homesoc-app</program_name>
+</decoder>
+
+<decoder name="homesoc-app-login">
+  <parent>homesoc-app</parent>
+  <prematch>^LOGIN_FAILED|^LOGIN_OK</prematch>
+  <regex>user=(\S+) src=(\S+) </regex>
+  <order>user, srcip</order>
+</decoder>

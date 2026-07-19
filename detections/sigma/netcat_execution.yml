@@ -1,0 +1,32 @@
+title: Netcat / Socat Execution
+id: 8d1fcf55-99d4-4e1c-b738-d496562754bc
+status: experimental
+description: >
+  Detects execution of netcat, ncat or socat, frequently used for reverse
+  shells, bind shells and ad-hoc data transfer. Mirrors Wazuh local rule 100034
+  (auditd key 'netcat').
+references:
+  - https://attack.mitre.org/techniques/T1059/
+  - https://attack.mitre.org/techniques/T1095/
+author: Anthony Mackenzi
+date: 2026/07/19
+tags:
+  - attack.execution
+  - attack.command_and_control
+  - attack.t1059
+  - attack.t1095
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  selection:
+    Image|endswith:
+      - '/nc'
+      - '/ncat'
+      - '/netcat'
+      - '/socat'
+  condition: selection
+falsepositives:
+  - Administrators using netcat for legitimate connectivity tests
+  - Monitoring scripts that use nc to probe TCP ports
+level: medium

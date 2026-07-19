@@ -1,0 +1,28 @@
+title: File Written To World-Writable Temp Directory
+id: 012a3cfb-9775-4f83-a49f-8fc611fd6e9d
+status: experimental
+description: >
+  Detects files being created or modified in /tmp or /dev/shm, commonly used to
+  stage downloaded payloads before execution. Mirrors Wazuh local rule 100062
+  (FIM real-time monitoring). Pair with process_creation from the same paths for
+  higher confidence.
+references:
+  - https://attack.mitre.org/techniques/T1059/
+author: Anthony Mackenzi
+date: 2026/07/19
+tags:
+  - attack.execution
+  - attack.t1059
+logsource:
+  product: linux
+  category: file_event
+detection:
+  selection:
+    TargetFilename|startswith:
+      - '/tmp/'
+      - '/dev/shm/'
+  condition: selection
+falsepositives:
+  - Many legitimate programs use /tmp for scratch files — treat as a weak signal
+    on its own and correlate with execution or network activity
+level: low

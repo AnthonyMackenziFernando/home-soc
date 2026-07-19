@@ -1,0 +1,26 @@
+title: SQL Injection Pattern In Web Request URI
+id: 04393407-7f2d-4277-9f27-c54b5407b970
+status: experimental
+description: >
+  Detects a UNION-based SQL injection pattern in the request URI of a web
+  server access log. Mirrors Wazuh local rule 100050 and Suricata SID 1000005.
+references:
+  - https://attack.mitre.org/techniques/T1190/
+  - https://owasp.org/www-community/attacks/SQL_Injection
+author: Anthony Mackenzi
+date: 2026/07/19
+tags:
+  - attack.initial_access
+  - attack.t1190
+logsource:
+  category: webserver
+detection:
+  selection:
+    c-uri|contains|all:
+      - 'union'
+      - 'select'
+  condition: selection
+falsepositives:
+  - Search or reporting features that legitimately pass the words union/select
+  - Security scanners run by your own team (correlate with source IP)
+level: high
