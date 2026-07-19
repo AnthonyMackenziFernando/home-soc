@@ -23,7 +23,7 @@ docker compose version
 ## 2. Get the repo
 
 ```bash
-git clone git@github.com:AnthonyMackenziFernando/home-soc.git
+git clone <your-home-soc-repo-url>
 cd home-soc
 ```
 
