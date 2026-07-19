@@ -1,3 +1,30 @@
+# Modern Sigma correlation: a base "failed auth" rule + an event_count correlation.
+# (The old `count() by src_ip > 8` pipe syntax is deprecated in current pySigma.)
+title: SSH Failed Authentication
+name: ssh_failed_auth
+id: 502ed8a2-d8f6-4ef4-89a6-ae0ec7e52281
+status: experimental
+description: A single failed SSH authentication — the base event for the brute-force correlation below.
+references:
+  - https://attack.mitre.org/techniques/T1110/
+author: Anthony Mackenzi
+date: 2026/07/19
+tags:
+  - attack.credential-access
+  - attack.t1110
+  - attack.t1110.001
+logsource:
+  product: linux
+  service: sshd
+detection:
+  selection:
+    - 'Failed password'
+    - 'Invalid user'
+  condition: selection
+falsepositives:
+  - A user occasionally mistyping their password (usually one or two events)
+level: informational
+---
 title: SSH Brute Force From Single Source
 id: 27f11011-1285-41bd-ab18-6d1d5c979786
 status: experimental
@@ -9,19 +36,19 @@ references:
   - https://attack.mitre.org/techniques/T1110/
 author: Anthony Mackenzi
 date: 2026/07/19
+correlation:
+  type: event_count
+  rules:
+    - ssh_failed_auth
+  group-by:
+    - src_ip
+  timespan: 90s
+  condition:
+    gte: 8
 tags:
-  - attack.credential_access
+  - attack.credential-access
   - attack.t1110
   - attack.t1110.001
-logsource:
-  product: linux
-  service: sshd
-detection:
-  selection:
-    - 'Failed password'
-    - 'Invalid user'
-  timeframe: 90s
-  condition: selection | count() by src_ip > 8
 falsepositives:
   - Misconfigured backup/automation account repeatedly using a stale password
   - A user who forgot their password (usually far fewer attempts)

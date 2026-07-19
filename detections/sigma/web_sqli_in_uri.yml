@@ -10,7 +10,7 @@ references:
 author: Anthony Mackenzi
 date: 2026/07/19
 tags:
-  - attack.initial_access
+  - attack.initial-access
   - attack.t1190
 logsource:
   category: webserver

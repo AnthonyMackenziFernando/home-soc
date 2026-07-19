@@ -34,12 +34,21 @@ def check_xml(path):
 
 
 def check_sigma(path):
+    """Validate a Sigma file. Supports multi-document files (a base rule plus a
+    Sigma correlation rule), so each document is checked for either a
+    detection+logsource block or a correlation block."""
     try:
-        doc = yaml.safe_load(open(path, encoding="utf-8"))
-        for key in ("title", "logsource", "detection"):
-            assert key in doc, f"missing '{key}'"
-        assert "condition" in doc["detection"], "detection missing 'condition'"
-        tags = [t for t in doc.get("tags", []) if t.startswith("attack.t")]
+        docs = [d for d in yaml.safe_load_all(open(path, encoding="utf-8")) if d]
+        assert docs, "no YAML documents"
+        for doc in docs:
+            assert "title" in doc, "missing 'title'"
+            if "correlation" in doc:
+                assert "condition" in doc["correlation"], "correlation missing 'condition'"
+            else:
+                for key in ("logsource", "detection"):
+                    assert key in doc, f"missing '{key}'"
+                assert "condition" in doc["detection"], "detection missing 'condition'"
+        tags = sorted({t for doc in docs for t in doc.get("tags", []) if t.startswith("attack.t")})
         assert tags, "no MITRE attack.* technique tag"
         print(f"OK  SIGMA {path} -> {','.join(tags)}")
     except Exception as e:  # noqa: BLE001

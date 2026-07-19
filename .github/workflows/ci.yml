@@ -29,7 +29,6 @@ jobs:
   sigma:
     name: Sigma rule check
     runs-on: ubuntu-latest
-    continue-on-error: true   # informational: pinned to the current Sigma taxonomy
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

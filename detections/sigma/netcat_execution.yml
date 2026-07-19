@@ -12,7 +12,7 @@ author: Anthony Mackenzi
 date: 2026/07/19
 tags:
   - attack.execution
-  - attack.command_and_control
+  - attack.command-and-control
   - attack.t1059
   - attack.t1095
 logsource:

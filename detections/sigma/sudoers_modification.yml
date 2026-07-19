@@ -10,7 +10,7 @@ references:
 author: Anthony Mackenzi
 date: 2026/07/19
 tags:
-  - attack.privilege_escalation
+  - attack.privilege-escalation
   - attack.persistence
   - attack.t1548.003
 logsource:
