@@ -1,0 +1,31 @@
+# =============================================================================
+# Home SOC — custom Suricata network IDS rules
+# Author: Anthony Mackenzi
+#
+# Local SID range 1000000-1999999 is reserved for user rules and will not
+# collide with the Emerging Threats Open ruleset.
+# Each rule carries a MITRE ATT&CK technique id in its metadata.
+# See deploy/suricata/README.md for how to load this file.
+# =============================================================================
+
+# --- Reconnaissance ----------------------------------------------------------
+# ICMP ping sweep: many echo requests from one source in a short window.
+alert icmp any any -> $HOME_NET any (msg:"HOMESOC ICMP ping sweep detected"; itype:8; threshold:type both, track by_src, count 10, seconds 5; classtype:attempted-recon; sid:1000001; rev:1; metadata:mitre_id T1018;)
+
+# Horizontal TCP SYN port scan: many half-open connections from one source.
+alert tcp any any -> $HOME_NET any (msg:"HOMESOC TCP SYN port scan detected"; flags:S; flow:to_server; threshold:type both, track by_src, count 30, seconds 5; classtype:attempted-recon; sid:1000002; rev:1; metadata:mitre_id T1046;)
+
+# Known offensive scanner / brute-force tool user-agents hitting a web service.
+alert http any any -> $HOME_NET any (msg:"HOMESOC Web scanner user-agent (sqlmap/nikto/nmap/gobuster)"; flow:established,to_server; http.user_agent; pcre:"/(sqlmap|nikto|nmap|masscan|dirbuster|gobuster|hydra)/i"; classtype:web-application-attack; sid:1000006; rev:1; metadata:mitre_id T1595;)
+
+# --- Initial access / delivery ----------------------------------------------
+# EICAR antivirus test file crossing the wire (safe malware-download stand-in).
+alert http any any -> any any (msg:"HOMESOC EICAR antivirus test file transferred"; flow:established; content:"EICAR-STANDARD-ANTIVIRUS-TEST-FILE"; nocase; classtype:trojan-activity; sid:1000004; rev:1; metadata:mitre_id T1105;)
+
+# SQL injection attempt in the request URI (UNION SELECT pattern).
+alert http any any -> $HOME_NET any (msg:"HOMESOC SQL injection attempt in URI (UNION SELECT)"; flow:established,to_server; http.uri; content:"union"; nocase; content:"select"; nocase; distance:0; classtype:web-application-attack; sid:1000005; rev:1; metadata:mitre_id T1190;)
+
+# --- Execution / exfiltration ------------------------------------------------
+# Reverse-shell heuristic: output of `id` (uid=.. gid=..) flowing outbound in
+# clear text is a strong sign of an interactive shell phoning home.
+alert tcp $HOME_NET any -> any any (msg:"HOMESOC Possible reverse shell — id output in cleartext egress"; flow:established,to_server; content:"uid="; content:"gid="; distance:0; within:64; classtype:trojan-activity; sid:1000003; rev:1; metadata:mitre_id T1059;)
