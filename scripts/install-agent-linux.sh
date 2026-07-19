@@ -61,6 +61,12 @@ if ! grep -q "home-soc:local-sources" "$OSSEC_CONF"; then
     <log_format>syslog</log_format>
     <location>/var/log/auth.log</location>
   </localfile>
+
+  <!-- General syslog (feeds the homesoc-app custom decoder demo) -->
+  <localfile>
+    <log_format>syslog</log_format>
+    <location>/var/log/syslog</location>
+  </localfile>
 </ossec_config>
 EOF
   echo "[+] Added Suricata, auditd and auth.log sources to $OSSEC_CONF"
