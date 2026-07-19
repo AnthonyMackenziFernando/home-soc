@@ -1,0 +1,40 @@
+name: lint
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  shellcheck:
+    name: Shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ShellCheck (fail on errors)
+        run: shellcheck -x -e SC1091 --severity=error scripts/*.sh simulations/*/run.sh
+
+  content:
+    name: Detection content & config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: pip install --quiet pyyaml
+      - name: Validate Wazuh rules, decoders, Sigma and compose
+        run: python3 .github/validate.py
+
+  sigma:
+    name: Sigma rule check
+    runs-on: ubuntu-latest
+    continue-on-error: true   # informational: pinned to the current Sigma taxonomy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: pip install --quiet sigma-cli
+      - name: sigma check
+        run: sigma check detections/sigma/
